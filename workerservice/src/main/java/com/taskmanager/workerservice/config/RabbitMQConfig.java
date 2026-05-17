@@ -4,27 +4,20 @@ import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
 import org.springframework.amqp.core.Queue;
-
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class RabbitMQConfig {
 
-    // Main Queue
     public static final String TASK_QUEUE = "taskQueue";
-
-    // Dead Letter Queue
     public static final String DLQ = "deadLetterQueue";
-
-    // Exchange
     public static final String EXCHANGE = "taskExchange";
-
-    // Routing Keys
     public static final String ROUTING_KEY = "taskRoutingKey";
     public static final String DLQ_ROUTING_KEY = "deadLetterRoutingKey";
 
-    // MAIN QUEUE
     @Bean
     public Queue taskQueue() {
         return new Queue(TASK_QUEUE, true, false, false,
@@ -34,19 +27,16 @@ public class RabbitMQConfig {
                 ));
     }
 
-    // DLQ
     @Bean
     public Queue deadLetterQueue() {
         return new Queue(DLQ);
     }
 
-    // Exchange
     @Bean
     public DirectExchange exchange() {
         return new DirectExchange(EXCHANGE);
     }
 
-    // Binding Main Queue
     @Bean
     public Binding taskBinding() {
         return BindingBuilder
@@ -55,12 +45,16 @@ public class RabbitMQConfig {
                 .with(ROUTING_KEY);
     }
 
-    // Binding DLQ
     @Bean
     public Binding deadLetterBinding() {
         return BindingBuilder
                 .bind(deadLetterQueue())
                 .to(exchange())
                 .with(DLQ_ROUTING_KEY);
+    }
+
+    @Bean
+    public MessageConverter jsonMessageConverter() {
+        return new Jackson2JsonMessageConverter();
     }
 }

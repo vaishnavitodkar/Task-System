@@ -1,10 +1,12 @@
 package com.taskmanager.taskservice.entity;
 
+import java.io.Serializable;
+
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "tasks")
-public class TaskEntity {
+public class TaskEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
