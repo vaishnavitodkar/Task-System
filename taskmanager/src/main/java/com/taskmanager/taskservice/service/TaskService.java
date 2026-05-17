@@ -1,10 +1,10 @@
 package com.taskmanager.taskservice.service;
 
-import java.util.Map;
+import java.util.List;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import com.taskmanager.taskservice.dto.TadkDto;
 import com.taskmanager.taskservice.entity.TaskEntity;
@@ -17,44 +17,38 @@ public class TaskService {
     private TaskRepository repository;
 
     @Autowired
-    private RestTemplate restTemplate;
+    private RabbitTemplate rabbitTemplate;
 
     public TadkDto createTask(TadkDto request) {
 
-        // Step 1: Save as PENDING
+        // Save task
         TaskEntity task = new TaskEntity();
+
         task.setPayload(request.getPayload());
         task.setStatus("PENDING");
 
         task = repository.save(task);
 
-        // Step 2: PROCESSING
-        task.setStatus("PROCESSING");
-        repository.save(task);
-
-        // Step 3: Call worker via gateway
-        Map response = restTemplate.postForObject(
-                "http://localhost:8080/worker/process",
-                request,
-                Map.class
+        // Send task to RabbitMQ
+        rabbitTemplate.convertAndSend(
+            "taskExchange",
+            "taskRoutingKey",
+            task
         );
 
-        // Step 4: Extract response
-        String status = (String) response.get("status");
-        String workerPort = (String) response.get("workerPort");
+        System.out.println("Task sent to RabbitMQ: " + task.getPayload());
 
-        // Step 5: Update DB
-        task.setStatus(status);
-        task.setWorkerPort(workerPort);
-        repository.save(task);
-
-        // Step 6: Return DTO
+        // Return response immediately
         TadkDto result = new TadkDto();
+
         result.setPayload(task.getPayload());
-        result.setStatus(status);
-        result.setWorkerPort(workerPort);
+        result.setStatus(task.getStatus());
 
         return result;
+    }
+
+    public List<TaskEntity> getAllTasks() {
+        return repository.findAll();
     }
 
     public TaskEntity getTask(Long id) {
